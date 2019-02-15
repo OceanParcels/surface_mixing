@@ -13,3 +13,12 @@ Use Simulations/AdvectParticles.py. The grid file has to be created beforehand, 
 The following command is used to advect particles for 10 years for the entropy simulation.
 
 python AdvectParticles.py -name FileName -y 2000 -m 1 -d 5 -simdays 3650 -posidx 3
+
+
+# Analysis
+
+## Creation of matrices
+Execute the functions in Analysis/create_matrix.py
+
+## Creation of figures
+Execute functions in Analysis/paper_figures.py
