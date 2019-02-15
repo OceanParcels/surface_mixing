@@ -82,4 +82,4 @@ if __name__=="__main__":
     p.add_argument('-simdays', '--simdays', type=int,default=None,help='Simulation days')
     p.add_argument('-pos', '--pos', type=int,default=0,help='Label of Lon/Lat initial array')
     args = p.parse_args()
-    p_advect(ptype=ptype[args.ptype],outname=args.name, pos=args.posidx, y=args.y, m=args.m, d=args.d, simdays=args.simdays)
+    p_advect(ptype=ptype[args.ptype],outname=args.name, pos=args.pos, y=args.y, m=args.m, d=args.d, simdays=args.simdays)

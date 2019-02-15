@@ -10,9 +10,9 @@ We used OceanParcels version 1.10 with slight modifications:
 Use Simulations/AdvectParticles.py. The grid file has to be created beforehand, containing the initial longitudes and latitudes of 0.2 degree (entropy) and 0.1 degree (Markov chain) particles.
 
 ## Simulation for fixed depths
-The following command is used to advect particles for 10 years for the entropy simulation.
+The following command is used to advect particles for 60 days for the transition matrix calculation. 'pos' is the index of initial particle grids.
 
-python AdvectParticles.py -name FileName -y 2000 -m 1 -d 5 -simdays 3650 -posidx 3
+python AdvectParticles.py -name testrun -y 2001 -m 1 -d 1 -simdays 60 -pos 0
 
 
 # Analysis
