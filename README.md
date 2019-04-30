@@ -21,4 +21,4 @@ python AdvectParticles.py -name testrun -y 2001 -m 1 -d 1 -simdays 60 -pos 0
 Execute the functions in Analysis/create_matrix.py
 
 ## Creation of figures
-Execute functions in Analysis/paper_figures.py
+Execute functions in Analysis/figures_paper.py
