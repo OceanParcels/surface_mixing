@@ -34,7 +34,9 @@ def create_particles():
     
     lons_new=np.array([lons[i] for i in range(len(lons)) if bathy_points[i]!=0])
     lats_new=np.array([lats[i] for i in range(len(lats)) if bathy_points[i]!=0])
-        
+    
+    lons_new[lons_new<0.] += 360.
+    
     np.savez(outdir + str(name), lons = lons_new, lats = lats_new)
 
 #create_particles()
@@ -55,7 +57,7 @@ def Plot_particles():
     ax = fig.add_subplot(211)
     ax.set_title("Particles")
     
-    m = Basemap(projection='robin',lon_0=180,resolution='c')
+    m = Basemap(projection='robin',lon_0=-180,resolution='c')
     m.drawcoastlines()
     xs, ys = m(lons, lats)
     m.scatter(xs,ys)
@@ -63,10 +65,10 @@ def Plot_particles():
     ax = fig.add_subplot(212)
     ax.set_title("Particles per bin. Should be constant everywhere but on land.")
 
-    m = Basemap(projection='robin',lon_0=0,resolution='c')
+    m = Basemap(projection='robin',lon_0=-180,resolution='c')
     m.drawcoastlines()
 
-    lon_bin_edges = np.arange(-180, 180+spacing, plotspacing)
+    lon_bin_edges = np.arange(0, 360+spacing, plotspacing)
     lat_bins_edges = np.arange(-90, 90+spacing, plotspacing)
     
     density, _, _ = np.histogram2d(lats, lons, [lat_bins_edges, lon_bin_edges])
@@ -106,7 +108,7 @@ def plot_grid():
     ##For testing the distribution
     
     plt.figure(figsize=(15,15))
-    m = Basemap(projection='mill', llcrnrlat=-89., urcrnrlat=89., llcrnrlon=-180., urcrnrlon=180., resolution='l')
+    m = Basemap(projection='mill', llcrnrlat=-89., urcrnrlat=89., llcrnrlon=0., urcrnrlon=360., resolution='l')
     m.drawcoastlines()
     
     p_tot=0
