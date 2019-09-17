@@ -1,0 +1,17 @@
+name: py3_surface_mixing
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.4
+  - ffmpeg>=3.2.3,<3.2.6
+  - git
+  - jupyter
+  - matplotlib=2.0.2
+  - netcdf4>=1.1.9
+  - numpy>=1.9.1
+  - scipy>=0.16.0
+  - xarray>=0.10.8
+  - netcdftime
+  - spyder
+  - basemap
