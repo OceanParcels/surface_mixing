@@ -70,7 +70,7 @@ def p_advect(outname='noname', coordinate_file='no_file_specified', y=2001, m=1,
     pset = ParticleSet(fieldset=fieldset, pclass=JITParticle, lon=lons, lat=lats, time=times)
     
     kernels = pset.Kernel(AdvectionRK4) + pset.Kernel(periodicBC)
-    pset.execute(kernels, runtime=timedelta(days=simdays), dt=timedelta(minutes=10), output_file=pset.ParticleFile(name=outfile, outputdt=timedelta(days=30)),recovery={ErrorCode.ErrorOutOfBounds: DeleteParticle})
+    pset.execute(kernels, runtime=timedelta(days=simdays), dt=timedelta(minutes=10), output_file=pset.ParticleFile(name=outfile, outputdt=timedelta(days=15)),recovery={ErrorCode.ErrorOutOfBounds: DeleteParticle})
 
 
 if __name__=="__main__":

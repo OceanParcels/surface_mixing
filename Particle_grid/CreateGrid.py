@@ -116,6 +116,8 @@ def plot_grid():
 
         data = np.load(outdir + 'coordinates' + str(i) + '.npz')
         lons = data['lons']
+        print('min: ', np.min(lons))
+        print('max: ', np.max(lons))
         lats = data['lats']
         p_tot+=len(lons)
         print(len(lons))
