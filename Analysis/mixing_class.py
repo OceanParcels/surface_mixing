@@ -4,7 +4,8 @@ Mixing of passive tracers at the ocean surface and implications for plastic tran
 David Wichmann, Philippe Delandmeter, Henk A Dijkstra and Erik van Sebille
 
 --------------
-Objects and functions for data analysis
+- Objects and functions for data analysis.
+- Functions to create python arrays for data analysis and plotting
 --------------
 """
 
@@ -14,10 +15,8 @@ from scipy import sparse
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
 import sys
-import matplotlib.colors as colors
 import os
 import scipy.sparse.linalg as sp_linalg
-import datetime
 
 (minlon, maxlon, minlat, maxlat) = (0., 360., -90., 90.) #maximum of bathymetry file is 10565 m
 
@@ -177,34 +176,12 @@ class ParticleData(object):
         for i in range(len(initial_indices)):
             vals[rows == initial_indices[i]] /= initial_counts[i]
 
-#        if remove_land:
-#            m = np.max(initial_counts)
-#            I = initial_indices[np.argwhere(initial_counts == m)]
-#            r = [i for i in range(len(rows)) if rows[i] in I]
-#            rows = rows[r]
-#            columns = columns[r]
-#            vals = vals[r]
-#            
-#            r = [i for i in range(len(rows)) if columns[i] in I]
-#            rows = rows[r]
-#            columns = columns[r]
-#            vals = vals[r]
-#
-#            del I
-#            del r
-#            
-#            if re_normalize:
-#                for r in np.unique(rows):
-#                    s = np.sum(vals[rows == r])
-#                    vals[rows == r] = vals[rows == r]/s
-#                                
         del initial_indices
         del initial_counts
 
         self.A = sparse.coo_matrix((vals, (rows, columns)), shape=(self.n_total, self.n_total))
 
         #check if non-zero rows add up to 1
-#        if not (remove_land and not re_normalize):
         print('Check normalization')
         s = sparse.coo_matrix.sum(self.A, axis=1)
         s = s[s!=0]
@@ -278,7 +255,6 @@ class ParticleData(object):
                 keep = np.multiply(keep,c)
                 
                 particle_gridindex=np.array([self.coords_to_matrixindex((lon, lat)) for (lon, lat) in zip(self.lons[:,t], self.lats[:,t])])
-    #            particle_gridindex=np.array([int(((la-minlat)//ddeg)*N+(lo-minlon)//ddeg) for la,lo in zip(self.lats[:,t],self.lons[:,t])])
                 ind.append([i for i in range(len(self.lons)) if particle_gridindex[i] in keep])
             
             print( 'Get set intersections...')
@@ -355,41 +331,29 @@ def compute_transfer_matrices_entropy(pdir, entropy_dir, d_deg):
         basin = np.array([1 if r[i]==i_basin else 0 for i in range(len(r))])
         
         #constrain to particles that are in the respective basin after each year
-        l={}
-        for t in range(len(tload)):
-            l[t]=basin
+        l={0: basin}
+
         basin_data = pdata.get_subset(l)
+        basin_data.set_discretizing_values(d_deg = 2.)
         
-#        lons=basin_data.lons.filled(np.nan)
-#        lats=basin_data.lats.filled(np.nan)
-#        pdata_basin = ParticleData(lons=lons, lats=lats)
-        #compute transfer matrix
+        n_initial = len(basin_data.lons)
+
+        print('Initial number of particles: ', n_initial)
+        
+        for t in range(1, len(tload)):
+            l[t]=basin
+
+        basin_data = basin_data.get_subset(l)
+        n_final = len(basin_data.lons)
+        print('Final number of particles: ', n_final)
+        print('Basin', i_basin)
+        print('Share of particles deleted: ', (n_initial-n_final)/n_initial)
+
+        #compute tranfer matrix
         for t in range(0,len(basin_data.lons[0])):     
             
             basin_data.compute_matrix(d_deg=d_deg, t0=0, t1=t)            
             sparse.save_npz(entropy_dir + 'transfer_matrix_deg' + str(int(d_deg)) + '_t' + str(t) + '_basin' + str(i_basin), basin_data.A)
-        
-#        np.savez(entropy_dir + '/reduced_particles_' + str(i_basin), lons=lons, lats=lats)
-        
-
-#def compute_transfer_matrix():
-#    #deg_labels is the choice of square binning
-#    
-#    for i_basin in range(1,6):
-#        
-#        #load reduced particle data for each basin
-#        pdata = np.load(outdir_paper + 'EntropyMatrix/Reduced_particles_' + str(i_basin) + '.npz', 'r')
-#        lons=pdata['lons']
-#        lats=pdata['lats']
-#
-#        del pdata
-#        pdata = ParticleData(lons=lons, lats=lats)
-#        
-#        #compute transfer matrix
-#        for t in range(0,len(lons[0])):     
-#            
-#            pdata.compute_matrix(d_deg=d_deg, t0=0, t1=t)            
-#            sparse.save_npz(outdir_paper + 'EntropyMatrix/transfer_matrix_deg' + str(int(d_deg)) + '/T_matrix_t' + str(t) + '_basin' + str(i_basin), pdata.A) #, original_labels=original_labels)
 
 
 """
@@ -446,7 +410,27 @@ def setup_annual_markov_chain(data_dir, matrix_dir, d_deg, n_grids):
         sparse.save_npz(matrix_dir + 'T', T)
 
 
-def get_matrix_power(matrix_dir, power):
+def get_matrix_power10(matrix_dir):
+    
+    print('Compute matrix power')
+    T = sparse.load_npz(matrix_dir + 'T.npz').toarray()
+    
+    T2 = T.dot(T)
+    del T
+    print('T2 created')
+    
+    T4 = T2.dot(T2)
+    print('T4 created')
+    T8 = T4.dot(T4)
+    print('T8 created')
+    del T4
+    T10 = T8.dot(T2)
+    print('T10 created')    
+
+    np.save(matrix_dir + 'T10', T10)
+
+
+def get_matrix_power_old(matrix_dir, power):
     
     T = sparse.load_npz(matrix_dir + 'T.npz')
     T = sparse.csr_matrix(T)
@@ -456,8 +440,7 @@ def get_matrix_power(matrix_dir, power):
     Tx = T**power
     sparse.save_npz(matrix_dir + 'T' + str(power), Tx)
 
-
-def get_clusters(matrix_dir, d_deg, matrix_file = 'T10.npz'):
+def get_clusters(matrix_dir, d_deg, matrix_file = 'T10.npy'):
 
     Lons_edges=np.linspace(-180,180,int(360/d_deg)+1)        
     Lats_edges=np.linspace(-90,90,int(180/d_deg)+1)
@@ -471,8 +454,8 @@ def get_clusters(matrix_dir, d_deg, matrix_file = 'T10.npz'):
                        'IO': (40.,100., -45., -15.)}
     labels = {'NP': 1, 'NA': 2, 'SP': 3, 'SA': 4, 'IO': 5}
 
-    T = sparse.load_npz(matrix_dir + matrix_file)
-    T = sparse.csr_matrix(T)
+    T = np.load(matrix_dir + matrix_file)
+
     final_regions = {}
      
     pdata = ParticleData()
@@ -502,10 +485,6 @@ def get_clusters(matrix_dir, d_deg, matrix_file = 'T10.npz'):
         for k in final_regions.keys():
             if final_regions[k][i]==1:
                 clusters[i]=labels[k]
-
-#    clusters = np.ma.masked_array(clusters, clusters==0) 
-#    clusters=clusters.reshape((len(Lats_centered),len(Lons_centered)))    
-#    ocean_clusters=np.roll(ocean_clusters,int(180/d_deg))
     
     np.save(matrix_dir + 'clusters', clusters)
 
@@ -527,7 +506,6 @@ def project_to_regions(matrix_dir):
 
         project = np.array([i for i in range(len(clusters)) if clusters[i] == basin_number])
 
-        
         print( 'projecting')
         
         #project matrix
@@ -540,6 +518,7 @@ def project_to_regions(matrix_dir):
         
         print('rowsum')
         rowsum = np.array(sparse.coo_matrix.sum(A_new, axis=1))[:,0]
+        
         
         #column-normalize                
         print('column normalize')
@@ -566,85 +545,96 @@ def stationary_densities(matrix_dir):
 
 
 def mixing_time(matrix_dir, eps):
-    
+
+    clusters = np.load(matrix_dir + 'clusters.npy')
+
     for basin_number in range(1,6):
         print( 'basin_number: ', basin_number)
         T0 = sparse.load_npz(matrix_dir + 'T_basin_' + str(basin_number) + '.npz').toarray()
         d0 = np.load(matrix_dir + 'stationary_density' + str(basin_number) + '.npy')
         d0 = np.real(d0)
-        
+
+        inds = np.argwhere(clusters == basin_number).flatten()
+        T0 = T0[inds,:][:,inds]
+        d0 = d0[inds]
+
         tmix = np.array([-100]*len(d0))
-        
+
         T=T0.copy()
         
-        for t in range(0,30):
+        t=0
+        while np.any(tmix<0):
+
             print( t)
             print( '----------')
-            for i in range(T.shape[0]):
-                if tmix[i] < 0:
-                    if .5 * np.sum(np.abs(d0-T[i,:]))<eps:
-                        tmix[i]=t      
-            T=np.dot(T0,T)
-        
-        np.save(matrix_dir + 'tmix_eps' + str(int(eps*100)) + '_' + 'basin_' +str(basin_number), tmix)
+            tmix = np.array([tmix[i] if ((not .5 * np.sum(np.abs(d0-T[i,:]))<eps) or tmix[i]>0) else t for i in range(len(tmix))])
 
+            T=np.dot(T0,T)
+            t+=1
+
+        tmix_full = clusters.copy()
+        tmix_full[clusters!=basin_number] = -100.
+        tmix_full[clusters==basin_number] = tmix
+        np.save(matrix_dir + 'tmix_eps' + str(int(eps*100)) + '_' + 'basin_' +str(basin_number), tmix_full)
+        
 
 def other_matrix_powers(matrix_dir):
     
-    T = sparse.load_npz(matrix_dir + 'T.npz')    
-    T = sparse.csr_matrix(T)
-    sparse.save_npz(matrix_dir + 'T0', T)
+    T = sparse.load_npz(matrix_dir + 'T.npz').toarray()
+    np.save(matrix_dir + 'T0', T)
+    from numpy.linalg import matrix_power
+    
+    T5 = matrix_power(T, 5)
+    np.save(matrix_dir + 'T5', T5)
+    del T
 
-    T5 = T**5
-    sparse.save_npz(matrix_dir + 'T5', T5)
-
-    T15 = T5**3
-    sparse.save_npz(matrix_dir + 'T15', T15)
+    T15 = matrix_power(T5, 3)
+    np.save(matrix_dir + 'T15', T15)
     
     T20 = T15.dot(T5)
-    sparse.save_npz(matrix_dir + 'T20', T20)    
+    np.save(matrix_dir + 'T20', T20)
     del T15
     
     T25 = T20.dot(T5)
-    sparse.save_npz(matrix_dir + 'T25', T25)        
+    np.save(matrix_dir + 'T25', T25)
 
     T30 = T25.dot(T5)
-    sparse.save_npz(matrix_dir + 'T30', T30)        
+    np.save(matrix_dir + 'T30', T30)
     del T25
     
-    T40 = T20**2
-    sparse.save_npz(matrix_dir + 'T40', T40)        
+    T40 = T20.dot(T20)
+    np.save(matrix_dir + 'T40', T40)
     del T40
     
     T50 = T20.dot(T30)
-    sparse.save_npz(matrix_dir + 'T50', T50)
+    np.save(matrix_dir + 'T50', T50)
     del T20
     del T30
     del T5
     
-    T100 = T50**2
-    sparse.save_npz(matrix_dir + 'T100', T100)    
+    T100 = T50.dot(T50)
+    np.save(matrix_dir + 'T100', T100)
     del T50
     
-    T200 = T100**2
-    sparse.save_npz(matrix_dir + 'T200', T200)
+    T200 = T100.dot(T100)
+    np.save(matrix_dir + 'T200', T200)
     
-    T500 = T200**2
+    T500 = T200.dot(T200)
     T500 = T500.dot(T100)
     del T100
     del T200
-    sparse.save_npz(matrix_dir + 'T500', T500)    
+    np.save(matrix_dir + 'T500', T500)
     
-    T1000 = T500**2
-    sparse.save_npz(matrix_dir + 'T1000', T1000)
+    T1000 = T500.dot(T500)
+    np.save(matrix_dir + 'T1000', T1000)
 
 
-
-#    def set_labels(self, ddeg, t):
-#        """
-#        labeling of particles according to rectilinear boxes with spacing ddeg
-#        """
-#        
-#        self.label_ddeg=ddeg
-#        N=360//ddeg
-#        self.label=np.array([int(((la-minlat)//ddeg)*N+(lo-minlon)//ddeg) for la,lo in zip(self.lats[:,t],self.lons[:,t])])
+def grid_edges(d_deg):
+    
+    Lons_edges=np.linspace(-180,180,int(360/d_deg)+1)        
+    Lats_edges=np.linspace(-90,90,int(180/d_deg)+1)
+    Lons_centered=np.array([(Lons_edges[i]+Lons_edges[i+1])/2. for i in range(len(Lons_edges)-1)])
+    Lats_centered=np.array([(Lats_edges[i]+Lats_edges[i+1])/2. for i in range(len(Lats_edges)-1)])        
+    lon_edges_2d,lat_edges_2d = np.meshgrid(Lons_edges,Lats_edges)
+    
+    return (Lons_centered, Lats_centered, lon_edges_2d,lat_edges_2d )
